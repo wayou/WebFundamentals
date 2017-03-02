@@ -232,7 +232,8 @@ function readFile(filename) {
     let contents = fs.readFileSync(filename, 'utf8');
     return contents;
   } catch (ex) {
-    logWarning(filename, null, 'Unable to read file, was it deleted?', ex);
+    let msg = 'Unable to read file, if it was deleted, was a redirect created?';
+    logWarning(filename, null, msg, ex);
     return null;
   }
 }
@@ -830,7 +831,6 @@ function testFile(filename, opts) {
     } else if (filenameObj.ext === '.js') {
       testPromise = testJavaScript(filename, contents, opts);
     } else {
-      filesNotTested.push(filename);
       let msg = 'No tests found for file type, was not tested.';
       gutil.log(chalk.yellow('WARNING:'), chalk.cyan(filename), msg);
       resolve(false);
