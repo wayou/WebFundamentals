@@ -13,19 +13,34 @@ Encrypted Media Extensions provides an API that enables web applications to inte
 
 EME is designed to enable the same app and encrypted files to be used in any browser, regardless of the underlying protection system. The former is made possible by the standardized APIs and flow while the latter is made possible by the concept of [Common Encryption](https://www.html5rocks.com/en/tutorials/eme/basics/#common-encryption).
 
-EME is an extension to the HTMLMediaElement specification — hence the name. Being an 'extension' means that browser support for EME is optional: if a browser does not support encrypted media, it will not be able to play encrypted media, but EME is not required for HTML spec compliance. From the EME spec:
+EME is an extension to the HTMLMediaElement specification — hence the name. Being an 'extension' means that browser support for EME is optional: if a browser does not support encrypted media, it will not be able to play encrypted media, but EME is not required for HTML spec compliance. From [the EME spec](https://w3c.github.io/encrypted-media/):
 
-<blockquote>This proposal extends <a href="http://www.w3.org/TR/html5/embedded-content-0.html#htmlmediaelement">HTMLMediaElement</a> providing APIs to control playback of protected content.
+> This proposal extends
+> [HTMLMediaElement](http://www.w3.org/TR/html5/embedded-content-0.html#htmlmediaelement)
+> providing APIs to control playback of protected content.
 
-The API supports use cases ranging from simple clear key decryption to high value video (given an appropriate user agent implementation). License/key exchange is controlled by the application, facilitating the development of robust playback applications supporting a range of content decryption and protection technologies.
+> The API supports use cases ranging from simple clear key decryption to high
+> value video (given an appropriate user agent implementation). License/key
+> exchange is controlled by the application, facilitating the development of
+> robust playback applications supporting a range of content decryption and
+> protection technologies.
 
-This specification does not define a content protection or Digital Rights Management system. Rather, it defines a common API that may be used to discover, select and interact with such systems as well as with simpler content encryption systems. Implementation of Digital Rights Management is not required for compliance with this specification: only the Clear Key system is required to be implemented as a common baseline.
+> This specification does not define a content protection or Digital Rights
+> Management system. Rather, it defines a common API that may be used to
+> discover, select and interact with such systems as well as with simpler
+> content encryption systems. Implementation of Digital Rights Management is not
+> required for compliance with this specification: only the Clear Key system is
+> required to be implemented as a common baseline.
 
-The common API supports a simple set of content encryption capabilities, leaving application functions such as authentication and authorization to page authors. This is achieved by requiring content protection system-specific messaging to be mediated by the page rather than assuming out-of-band communication between the encryption system and a license or other server.</blockquote>
+> The common API supports a simple set of content encryption capabilities,
+> leaving application functions such as authentication and authorization to page
+> authors. This is achieved by requiring content protection system-specific
+> messaging to be mediated by the page rather than assuming out-of-band
+> communication between the encryption system and a license or other server.
 
 EME implementations use the following external components:
 
-* **Key System:** A content protection (DRM) mechanism. EME doesn't define Key Systems themselves, apart from Clear Key (more about that below).
+* **Key System:** A content protection (DRM) mechanism. EME doesn't define Key Systems themselves, apart from Clear Key (more about that [below](#clear_key)).
 * **Content Decryption Module (CDM):** A client-side software or hardware mechanism that enables playback of encrypted media. As with Key Systems, EME doesn't define any CDMs, but provides an interface for applications to interact with CDMs that are available.
 * **License (Key) server:** Interacts with a CDM to provide keys to decrypt media. Negotiation with the license server is the responsibility of the application.
 * **Packaging service:** Encodes and encrypts media for distribution/consumption.
@@ -34,19 +49,37 @@ Note that an application using EME interacts with a license server to get keys t
 
 ## How does EME work?
 
-Here's how the components of EME interact, corresponding to the code example below:
+Here's how the components of EME interact, corresponding to the [code example below](#getting_a_key_from_a_license_server):
 
-If multiple formats or codecs are available, MediaSource.isTypeSupported() or HTMLMediaElement.canPlayType() can both be used to select the right one. However, the CDM may only support a subset of what the browser supports for unencrypted content. It's best to negotiate a MediaKeys configuration before selecting a format and codec. If the application waits for the encrypted event but then MediaKeys shows it can't handle the chosen format/codec, it may be too late to switch without interrupting playback.
+> If multiple formats or codecs are available,
+> [MediaSource.isTypeSupported()](https://www.w3.org/TR/media-source/#dom-mediasource-istypesupported) or
+> [HTMLMediaElement.canPlayType()](https://dev.w3.org/html5/spec-preview/media-elements.html#dom-navigator-canplaytype
+> can both be used to select the right one.
+> However, the CDM may only support a subset of what the browser supports for
+> unencrypted content. It's best to negotiate a MediaKeys configuration before
+> selecting a format and codec. If the application waits for the encrypted event
+> but then MediaKeys shows it can't handle the chosen format/codec, it may be
+> too late to switch without interrupting playback.
 
-The recommended flow is to negotiate MediaKeys first, using MediaKeysSystemAccess.getConfiguration() to find out the negotiated configuration.
+> The recommended flow is to negotiate MediaKeys first, using
+> MediaKeysSystemAccess.getConfiguration() to find out the negotiated
+> configuration.
 
-If there is only one format/codec to choose from, then there's no need for getConfiguration(). However, it's still preferable to set up MediaKeys first. The only reason to wait for the encrypted event is if there is no way of knowing whether the content is encrypted or not, but in practice that's unlikely.
+> If there is only one format/codec to choose from, then there's no need for
+> getConfiguration(). However, it's still preferable to set up MediaKeys first.
+> The only reason to wait for the encrypted event is if there is no way of
+> knowing whether the content is encrypted or not, but in practice that's
+> unlikely.
 
 1. A web application attempts to play audio or video that has one or more encrypted streams.
 1. The browser recognizes that the media is encrypted (see box below for how that happens) and fires an encrypted event with metadata (initData) obtained from the media about the encryption.
 1. The application handles the encrypted event:
-1. If no MediaKeys object has been associated with the media element, first select an available Key System by using navigator.requestMediaKeySystemAccess() to check what Key Systems are available, then create a MediaKeys object for an available Key System via a MediaKeySystemAccess object. Note that initialization of the MediaKeys object should happen before the first encrypted event. Getting a license server URL is done by the app independently of selecting an available key system. A MediaKeys object represents all the keys available to decrypt the media for an audio or video element. It represents a CDM instance and provides access to the CDM, specifically for creating key sessions, which are used to obtain keys from a license server.
-1. Once the MediaKeys object has been created, assign it to the media element: setMediaKeys() associates the MediaKeys object with an HTMLMediaElement, so that its keys can be used during playback, i.e. during decoding.
+    1. If no MediaKeys object has been associated with the media element, first select an available Key System by using navigator.requestMediaKeySystemAccess() to check what Key Systems are available, then create a MediaKeys object for an available Key System via a MediaKeySystemAccess object. Note that initialization of the MediaKeys object should happen before the first encrypted event. Getting a license server URL is done by the app independently of selecting an available key system. A MediaKeys object represents all the keys available to decrypt the media for an audio or video element. It represents a CDM instance and provides access to the CDM, specifically for creating key sessions, which are used to obtain keys from a license server.
+
+    1. Once the MediaKeys object has been created, assign it to the media element:
+    setMediaKeys() associates the MediaKeys object with an HTMLMediaElement, so that
+    its keys can be used during playback, i.e. during decoding.
+
 1. The app creates a MediaKeySession by calling createSession() on the MediaKeys. This creates a MediaKeySession, which represents the lifetime of a license and its key(s).
 1. The app generates a license request by passing the media data obtained in the encrypted handler to the CDM, by calling generateRequest() on the MediaKeySession.
 1. The CDM fires a message event: a request to acquire a key from a license server.
@@ -55,11 +88,11 @@ If there is only one format/codec to choose from, then there's no need for getCo
 1. The CDM decrypts the media using the keys in the license. A valid key may be used, from any session within the MediaKeys associated with the media element. The CDM will access the key and policy, indexed by Key ID.
 Media playback resumes.
 
-How does the browser know that media is encrypted?
+> How does the browser know that media is encrypted?
 
-This information is in the metadata of the media container file, which will be in a format such as ISO BMFF or WebM. For ISO BMFF this means header metadata, called the protection scheme information box. WebM uses the Matroska ContentEncryption element, with some WebM-specific additions. Guidelines are provided for each container in an EME-specific registry.
+> This information is in the metadata of the media container file, which will be in a format such as ISO BMFF or WebM. For ISO BMFF this means header metadata, called the protection scheme information box. WebM uses the Matroska ContentEncryption element, with some WebM-specific additions. Guidelines are provided for each container in an EME-specific registry.
 
-Note that there may be multiple messages between the CDM and the license server, and all communication in this process is opaque to the browser and application: messages are only understood by the CDM and license server, although the app layer can see what type of message the CDM is sending. The license request contains proof of the CDM's validity (and trust relationship) as well as a key to use when encrypting the content key(s) in the resulting license.
+Note that there may be multiple messages between the CDM and the license server, and all communication in this process is opaque to the browser and application: messages are only understood by the CDM and license server, although the app layer can see [what type of message](https://w3c.github.io/encrypted-media/#idl-def-MediaKeyMessageType) the CDM is sending. The license request contains proof of the CDM's validity (and trust relationship) as well as a key to use when encrypting the content key(s) in the resulting license.
 
 ## But what do CDMs actually do?
 
@@ -87,7 +120,7 @@ EME doesn't mandate a particular Key System; among current desktop and mobile br
 
 In typical commercial use, content will be encrypted and encoded using a packaging service or tool. Once the encrypted media is made available online, a web client can obtain a key (contained within a license) from a license server and use the key to enable decryption and playback of the content.
 
-The following code (adapted from the spec examples) shows how an application can select an appropriate key system and obtain a key from a license server.
+The following code (adapted from the [spec examples](http://w3c.github.io/encrypted-media/#examples)) shows how an application can select an appropriate key system and obtain a key from a license server.
 
     var video = document.querySelector('video');
 
@@ -145,7 +178,7 @@ This is in contrast to legacy solutions that would only work with a complete ver
 
 Although EME does not define DRM functionality, the spec currently mandates that all browsers supporting EME must implement Clear Key. Using this system, media can be encrypted with a key and then played back simply by providing that key. Clear Key can be built into the browser: it does not require the use of a separate decryption module.
 
-While not likely to be used for many types of commercial content, Clear Key is fully interoperable across all browsers that support EME. It is also handy for testing EME implementations, and applications using EME, without the need to request a content key from a license server. There is a simple Clear Key example at simpl.info/ck. Below is a walkthrough of the code, which parallels the steps described above, though without license server interaction.
+While not likely to be used for many types of commercial content, Clear Key is fully interoperable across all browsers that support EME. It is also handy for testing EME implementations, and applications using EME, without the need to request a content key from a license server. There is a simple Clear Key example at [simpl.info/ck](http://simpl.info/eme/clearkey). Below is a walkthrough of the code, which parallels the steps described [above](#getting_a_key_from_a_license_server), though without license server interaction.
 
     // Define a key: hardcoded in this example
     // – this corresponds to the key used for encryption
@@ -235,19 +268,19 @@ To test this code, you need an encrypted video to play. Encrypting a video for u
 
 ## Related technology &num;1&colon; Media Source Extensions (MSE)
 
-The HTMLMediaElement is a creature of simple beauty.
+The [HTMLMediaElement](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement) is a creature of simple beauty.
 
 We can load, decode and play media simply by providing a src URL:
 
-    &lt;video src='foo.webm'&gt;&lt;/video&gt;
+    <video src='foo.webm'></video>
 
 The Media Source API is an extension to HTMLMediaElement enabling more fine-grained control over the source of media, by allowing JavaScript to build streams for playback from 'chunks' of video. This in turn enables techniques such as adaptive streaming and time shifting.
 
 Why is MSE important to EME? Because in addition to distributing protected content, commercial content providers must be able to adapt content delivery to network conditions and other requirements. Netflix, for example, dynamically changes stream bitrate as network conditions change. EME works with playback of media streams provided by an MSE implementation, just as it would with media provided via a src attribute.
 
-How to chunk and play back media encoded at different bitrates? See the DASH section below.
+How to chunk and play back media encoded at different bitrates? See the [DASH section below](#related_technology_2_dynamic_adaptive_streaming_over_http_dash).
 
-You can see MSE in action at simpl.info/mse; for the purposes of this example, a WebM video is split into five chunks using the File APIs. In a production application, chunks of video would be retrieved via Ajax.
+You can see MSE in action at [simpl.info/mse](http://simpl.info/mse); for the purposes of this example, a WebM video is split into five chunks using the File APIs. In a production application, chunks of video would be retrieved via Ajax.
 
 First a SourceBuffer is created:
 
@@ -268,13 +301,13 @@ The entire movie is then 'streamed' to a video element by appending each chunk u
       }
     };
 
-Find out more about MSE in the HTML5 Rocks article.
+Find out more about MSE in the [MSE primer](/web/fundamentals/getting-started/primers/media-source-extensions).
 
 ## Related technology &num;2&colon; Dynamic Adaptive Streaming over HTTP (DASH)
 
 Multi-device, multi-platform, mobile — whatever you call it, the web is often experienced under conditions of changeable connectivity. Dynamic, adaptive delivery is crucial for coping with bandwidth constraints and variability in the multi-device world.
 
-DASH (aka MPEG-DASH) is designed to enable the best possible media delivery in a flaky world, for both streaming and download. Several other technologies do something similar — such as [Apple's HTTP Live Streaming](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) (HLS) and Microsoft's [Smooth Streaming](https://en.wikipedia.org/wiki/Adaptive_bitrate_streaming#Microsoft_Smooth_Streaming) — but DASH is the only method of adaptive bitrate streaming via HTTP that is based on an open standard. DASH is already in use by sites such as YouTube.
+DASH (aka MPEG-DASH) is designed to enable the best possible media delivery in a flaky world, for both streaming and download. Several other technologies do something similar — such as Apple's [HTTP Live Streaming](https://en.wikipedia.org/wiki/HTTP_Live_Streaming) (HLS) and Microsoft's [Smooth Streaming](https://en.wikipedia.org/wiki/Adaptive_bitrate_streaming#Microsoft_Smooth_Streaming) — but DASH is the only method of adaptive bitrate streaming via HTTP that is based on an open standard. DASH is already in use by sites such as YouTube.
 
 What does this have to do with EME and MSE? MSE-based DASH implementations can parse a manifest, download segments of video at an appropriate bitrate, and feed them to a video element when it gets hungry — using existing HTTP infrastructure.
 
@@ -287,9 +320,21 @@ DASH does what it says on the tin:
 * **Streaming:** allows for streaming as well as download.
 * **HTTP:** enables content delivery with the advantage of HTTP, without the disadvantages of a traditional streaming server.
 
-The BBC has begun [providing test streams using DASH](http://bbc.co.uk/rd/blog/2013/09/mpeg-dash-test-streams:
+The BBC has begun [providing test streams using DASH](http://bbc.co.uk/rd/blog/2013/09/mpeg-dash-test-streams):
 
-<blockquote>The media is encoded a number of times at different bitrates. Each encoding is called a Representation. These are split into a number of Media Segments. The client plays a programme by requesting segments, in order, from a representation over HTTP. Representations can be grouped into Adaptation Sets of representations containing equivalent content. If the client wishes to change bitrate it can pick an alternative from the current adaption set and start requesting segments from that representation. Content is encoded in such a way to make this switching easy for the client to do. In addition to a number of media segments, a representation generally also has an Initialisation Segment. This can be thought of as a header, containing information about the encoding, frame sizes, etc. A client needs to obtain this for a given representation before consuming media segments from that representation.</blockquote>
+> The media is encoded a number of times at different bitrates. Each encoding is
+> called a Representation. These are split into a number of Media Segments. The
+> client plays a programme by requesting segments, in order, from a
+> representation over HTTP. Representations can be grouped into Adaptation Sets
+> of representations containing equivalent content. If the client wishes to
+> change bitrate it can pick an alternative from the current adaption set and
+> start requesting segments from that representation. Content is encoded in such
+> a way to make this switching easy for the client to do. In addition to a
+> number of media segments, a representation generally also has an
+> Initialisation Segment. This can be thought of as a header, containing
+> information about the encoding, frame sizes, etc. A client needs to obtain
+> this for a given representation before consuming media segments from that
+> representation.
 
 To summarize:
 
@@ -299,29 +344,29 @@ To summarize:
 
 As part of the video segmentation process, an XML manifest known as a Media Presentation Description (MPD) is built programmatically. This describes Adaptation Sets and Representations, with durations and URLs. An MPD looks like this:
 
-    &lt;MPD xmlns="urn:mpeg:DASH:schema:MPD:2011" mediaPresentationDuration="PT0H3M1.63S" minBufferTime="PT1.5S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
-    type="static"&gt;
-      &lt;Period duration="PT0H3M1.63S" start="PT0S"&gt;
-        &lt;AdaptationSet&gt;
-          &lt;ContentComponent contentType="video" id="1" /&gt;
-          &lt;Representation bandwidth="4190760" codecs="avc1.640028" height="1080" id="1" mimeType="video/mp4" width="1920"&gt;
-            &lt;BaseURL&gt;car-20120827-89.mp4&lt;/BaseURL&gt;
-            &lt;SegmentBase indexRange="674-1149"&gt;
-              &lt;Initialization range="0-673" /&gt;
-            &lt;/SegmentBase&gt;
-          &lt;/Representation&gt;
-          &lt;Representation bandwidth="2073921" codecs="avc1.4d401f" height="720" id="2" mimeType="video/mp4" width="1280"&gt;
-            &lt;BaseURL&gt;car-20120827-88.mp4&lt;/BaseURL&gt;
-            &lt;SegmentBase indexRange="708-1183"&gt;
-              &lt;Initialization range="0-707" /&gt;
-            &lt;/SegmentBase&gt;
-          &lt;/Representation&gt;
+    <MPD xmlns="urn:mpeg:DASH:schema:MPD:2011" mediaPresentationDuration="PT0H3M1.63S" minBufferTime="PT1.5S" profiles="urn:mpeg:dash:profile:isoff-on-demand:2011"
+    type="static">
+      <Period duration="PT0H3M1.63S" start="PT0S">
+        <AdaptationSet>
+          <ContentComponent contentType="video" id="1" />
+          <Representation bandwidth="4190760" codecs="avc1.640028" height="1080" id="1" mimeType="video/mp4" width="1920">
+            <BaseURL>car-20120827-89.mp4</BaseURL>
+            <SegmentBase indexRange="674-1149">
+              <Initialization range="0-673" />
+            </SegmentBase>
+          </Representation>
+          <Representation bandwidth="2073921" codecs="avc1.4d401f" height="720" id="2" mimeType="video/mp4" width="1280">
+            <BaseURL>car-20120827-88.mp4</BaseURL>
+            <SegmentBase indexRange="708-1183">
+              <Initialization range="0-707" />
+            </SegmentBase>
+          </Representation>
 
           …
 
-        &lt;/AdaptationSet&gt;
-      &lt;/Period&gt;
-    &lt;/MPD&gt;
+        </AdaptationSet>
+      </Period>
+    </MPD>
 
 (This XML is taken from [the .mpd file](http://yt-dash-mse-test.commondatastorage.googleapis.com/media/car-20120827-manifest.mpd) used for the [YouTube DASH demo player](http://dash-mse-test.appspot.com/dash-player.html?url=http://yt-dash-mse-test.commondatastorage.googleapis.com/media/car-20120827-manifest.mpd).)
 
@@ -331,7 +376,7 @@ According to the DASH spec, an MPD file could in theory be used as the src for a
 
 ## Conclusion
 
-Use of the web to deliver paid-for video and audio is growing at a [huge rate](http://www.cmo.com/content/dam/CMO_Other/ADI/Video_Benchmark_Q2_2014/video_benchmark_report-2014.pdf). It seems that every new device, whether it's a tablet, game console, connected TV, or set-top box, is able to stream media from the major content providers over HTTP. [Over 85%](http://longtailvideo.com/html5) of mobile and desktop browsers now support &lt;video&gt; and &lt;audio&gt;, and Cisco estimates that [video will be 80 to 90 percent of global consumer internet traffic](http://www.cisco.com/en/US/solutions/collateral/ns341/ns525/ns537/ns705/ns827/white_paper_c11-481360_ns827_Networking_Solutions_White_Paper.html) by 2017. In this context, browser support for protected content distribution is likely to be become increasingly significant, as browser vendors curtail support for APIs that most media plugins rely on.
+Use of the web to deliver paid-for video and audio is growing at a [huge rate](http://www.cmo.com/content/dam/CMO_Other/ADI/Video_Benchmark_Q2_2014/video_benchmark_report-2014.pdf). It seems that every new device, whether it's a tablet, game console, connected TV, or set-top box, is able to stream media from the major content providers over HTTP. [Over 85%](http://longtailvideo.com/html5) of mobile and desktop browsers now support &lt;video&gt; and &lt;audio&gt;, and Cisco estimates that [video will be 80 to 90 percent of global consumer internet traffic](http://www.cisco.com/en/US/solutions/collateral/ns341/ns525/ns537/ns705/ns827/white_paper_c11-481360_ns827_Networking_Solutions_White_Paper.html) by 2017. In this context, browser support for protected content distribution is likely to be become increasingly significant, as [browser vendors](https://blog.mozilla.org/security/2013/01/29/putting-users-in-control-of-plugins/) [curtail support](https://sites.google.com/a/chromium.org/dev/developers/npapi-deprecation) for APIs that most media plugins rely on.
 
 ## Further reading
 
