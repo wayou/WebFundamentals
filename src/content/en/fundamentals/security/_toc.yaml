@@ -13,6 +13,8 @@ toc:
         path: /web/fundamentals/security/encrypt-in-transit/intro-to-security-terminology
       - title: Enabling HTTPS on Your Servers
         path: /web/fundamentals/security/encrypt-in-transit/enable-https
+    - title: Encrypted Media Extensions
+      path: /web/fundamentals/security/eme
     - title: Preventing Mixed Content
       section:
       - title: What is Mixed Content?
